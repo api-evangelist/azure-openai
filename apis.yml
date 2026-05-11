@@ -1,0 +1,101 @@
+aid: azure-openai
+name: Azure OpenAI Service
+description: >-
+  Azure OpenAI Service (part of Microsoft Foundry Models) provides REST API
+  access to OpenAI models including GPT, o-series reasoning models, DALL-E,
+  Whisper, and embedding models, hosted within Microsoft Azure with enterprise
+  security, regional availability, private networking, content filtering, and
+  Microsoft Entra ID integration. The data-plane REST API exposes endpoints
+  for chat completions, completions, embeddings, image generation, audio
+  transcription/translation, fine-tuning, and the Responses API, while the
+  control-plane API manages Azure OpenAI resources and deployments.
+type: Index
+image: https://kinlane-productions.s3.amazonaws.com/apis-json/apis-json-logo.jpg
+tags:
+  - AI
+  - LLM
+  - Generative AI
+  - Azure
+  - OpenAI
+  - Foundation Models
+  - Chat Completions
+  - Embeddings
+url: https://raw.githubusercontent.com/api-evangelist/azure-openai/refs/heads/main/apis.yml
+created: '2026-05-11'
+modified: '2026-05-11'
+specificationVersion: '0.19'
+apis:
+  - aid: azure-openai:inference-api
+    name: Azure OpenAI Inference REST API
+    description: >-
+      Data-plane REST API for running inference against deployed Azure OpenAI
+      models, including chat completions, completions, embeddings, image
+      generation, and audio transcription/translation. Authenticate with API
+      key (api-key header) or Microsoft Entra ID bearer token.
+    humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+    baseURL: https://{your-resource-name}.openai.azure.com/openai
+    tags:
+      - Inference
+      - Chat Completions
+      - Embeddings
+      - Image Generation
+      - Audio
+    properties:
+      - type: Documentation
+        url: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+      - type: API Reference (Latest)
+        url: https://learn.microsoft.com/en-us/azure/foundry/openai/latest
+      - type: API Reference (Preview)
+        url: https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest
+      - type: OpenAPI Source
+        url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
+  - aid: azure-openai:responses-api
+    name: Azure OpenAI Responses API
+    description: >-
+      Stateful, agent-friendly API for building multi-turn AI experiences with
+      tool use, file inputs, and conversation state managed on the service side.
+    humanURL: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
+    baseURL: https://{your-resource-name}.openai.azure.com/openai/responses
+    tags:
+      - Responses
+      - Agents
+      - Tool Use
+    properties:
+      - type: Documentation
+        url: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
+  - aid: azure-openai:control-plane
+    name: Azure OpenAI Control Plane API
+    description: >-
+      Azure Resource Manager (ARM) REST API for creating and managing Azure
+      OpenAI accounts, model deployments, network rules, and other resource
+      configuration.
+    humanURL: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
+    baseURL: https://management.azure.com
+    tags:
+      - ARM
+      - Control Plane
+      - Deployments
+      - Resource Management
+    properties:
+      - type: Documentation
+        url: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
+common:
+  - type: Website
+    url: https://azure.microsoft.com/en-us/products/ai-services/openai-service
+  - type: Documentation
+    url: https://learn.microsoft.com/en-us/azure/ai-services/openai/
+  - type: API Reference
+    url: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  - type: Quickstart
+    url: https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart
+  - type: Pricing
+    url: https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/
+  - type: Sign Up
+    url: https://azure.microsoft.com/en-us/free/
+  - type: GitHub Samples
+    url: https://github.com/Azure-Samples/Azure-OpenAI-Docs-Samples
+  - type: OpenAPI Source
+    url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
+maintainers:
+  - FN: Kin Lane
+    email: kin@apievangelist.com

@@ -84,13 +84,13 @@ common:
     url: https://azure.microsoft.com/en-us/products/ai-services/openai-service
   - type: Documentation
     url: https://learn.microsoft.com/en-us/azure/ai-services/openai/
-  - type: API Reference
+  - type: APIReference
     url: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
   - type: Quickstart
     url: https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart
   - type: Pricing
     url: https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/
-  - type: Sign Up
+  - type: SignUp
     url: https://azure.microsoft.com/en-us/free/
   - type: GitHub Samples
     url: https://github.com/Azure-Samples/Azure-OpenAI-Docs-Samples

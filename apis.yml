@@ -96,6 +96,8 @@ common:
     url: https://github.com/Azure-Samples/Azure-OpenAI-Docs-Samples
   - type: OpenAPI Source
     url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
+  - type: LLMsTxt
+    url: https://azure.microsoft.com/llms.txt
 maintainers:
   - FN: Kin Lane
     email: kin@apievangelist.com

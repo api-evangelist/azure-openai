@@ -1,0 +1,2336 @@
+asyncapi: '2.6.0'
+id: 'urn:com:microsoft:azure:openai:asyncapi'
+info:
+  title: Azure OpenAI Service - Streaming and Realtime APIs
+  version: '2025-04-01-preview'
+  description: |
+    AsyncAPI 2.6 description of the asynchronous and streaming surfaces of the
+    Azure OpenAI Service (part of Microsoft Foundry Models):
+
+      * The **Realtime API** over a WebSocket connection used for low-latency,
+        bidirectional, multimodal (audio + text + function-calling)
+        conversations with GPT-class realtime-enabled models.
+      * The **Chat Completions streaming API** over HTTP + Server-Sent Events
+        used for incremental delivery of `chat.completion.chunk` deltas while
+        a chat completion is being generated.
+
+    The Azure Realtime API follows the OpenAI Realtime API specification.
+    Azure deviates from the OpenAI reference in that the `model` field inside
+    `input_audio_transcription` configuration must reference a deployed
+    Azure model (a deployment name such as `my-gpt-4o-transcribe-deployment`)
+    rather than the raw OpenAI model identifier.
+  contact:
+    name: Microsoft Azure OpenAI Service
+    url: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/
+  license:
+    name: Microsoft Terms of Use
+    url: https://www.microsoft.com/en-us/legal/terms-of-use
+  tags:
+    - name: realtime
+      description: Realtime WebSocket conversational API.
+    - name: streaming
+      description: HTTP Server-Sent Events (SSE) streaming.
+    - name: azure-openai
+      description: Azure-hosted OpenAI models.
+  externalDocs:
+    description: Azure OpenAI Realtime API reference
+    url: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/realtime-audio-reference
+
+defaultContentType: application/json
+
+servers:
+  realtime:
+    url: 'wss://{resource_name}.openai.azure.com/openai/realtime?api-version={api_version}&deployment={deployment}'
+    protocol: wss
+    description: |
+      Azure OpenAI Realtime WebSocket endpoint. The connection is authenticated
+      with either an Azure OpenAI `api-key` header or a Microsoft Entra ID
+      bearer token via the `Authorization` header.
+    variables:
+      resource_name:
+        description: Name of your Azure OpenAI / Microsoft Foundry resource (e.g. `my-aoai-eastus2`).
+        default: my-resource
+      api_version:
+        description: Realtime API version (date string).
+        default: '2025-04-01-preview'
+        enum:
+          - '2024-10-01-preview'
+          - '2024-12-17'
+          - '2025-04-01-preview'
+      deployment:
+        description: Name of the deployed realtime-capable model (e.g. `gpt-4o-realtime-preview`, `gpt-realtime`).
+        default: gpt-4o-realtime-preview
+    security:
+      - apiKey: []
+      - entraId: []
+    bindings:
+      ws:
+        bindingVersion: '0.1.0'
+        headers:
+          type: object
+          properties:
+            api-key:
+              type: string
+              description: Azure OpenAI resource key.
+            Authorization:
+              type: string
+              description: 'Microsoft Entra ID bearer token (`Bearer <token>`).'
+            OpenAI-Beta:
+              type: string
+              description: Beta header for realtime (e.g. `realtime=v1`).
+  inference:
+    url: 'https://{resource_name}.openai.azure.com/openai'
+    protocol: https
+    description: |
+      Azure OpenAI data-plane HTTPS endpoint. Streaming responses for chat
+      completions are returned as `text/event-stream` Server-Sent Events when
+      the request body sets `"stream": true`.
+    variables:
+      resource_name:
+        description: Name of your Azure OpenAI / Microsoft Foundry resource.
+        default: my-resource
+    security:
+      - apiKey: []
+      - entraId: []
+    bindings:
+      http:
+        bindingVersion: '0.3.0'
+
+channels:
+  # ---------------------------------------------------------------------------
+  # Realtime WebSocket - aggregate client / server channels
+  # ---------------------------------------------------------------------------
+  /openai/realtime#client:
+    description: |
+      Aggregate stream of client events sent by the application to the Azure
+      OpenAI Realtime service over the WebSocket connection.
+    servers:
+      - realtime
+    publish:
+      operationId: sendRealtimeClientEvent
+      summary: Publish any Realtime client event to the server.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/SessionUpdate'
+          - $ref: '#/components/messages/InputAudioBufferAppend'
+          - $ref: '#/components/messages/InputAudioBufferCommit'
+          - $ref: '#/components/messages/InputAudioBufferClear'
+          - $ref: '#/components/messages/OutputAudioBufferClear'
+          - $ref: '#/components/messages/ConversationItemCreate'
+          - $ref: '#/components/messages/ConversationItemRetrieve'
+          - $ref: '#/components/messages/ConversationItemTruncate'
+          - $ref: '#/components/messages/ConversationItemDelete'
+          - $ref: '#/components/messages/ResponseCreate'
+          - $ref: '#/components/messages/ResponseCancel'
+          - $ref: '#/components/messages/TranscriptionSessionUpdate'
+
+  /openai/realtime#server:
+    description: |
+      Aggregate stream of server events emitted by the Azure OpenAI Realtime
+      service to the connected client.
+    servers:
+      - realtime
+    subscribe:
+      operationId: receiveRealtimeServerEvent
+      summary: Subscribe to any Realtime server event from the service.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/Error'
+          - $ref: '#/components/messages/SessionCreated'
+          - $ref: '#/components/messages/SessionUpdated'
+          - $ref: '#/components/messages/TranscriptionSessionUpdated'
+          - $ref: '#/components/messages/ConversationCreated'
+          - $ref: '#/components/messages/ConversationItemAdded'
+          - $ref: '#/components/messages/ConversationItemCreated'
+          - $ref: '#/components/messages/ConversationItemDone'
+          - $ref: '#/components/messages/ConversationItemRetrieved'
+          - $ref: '#/components/messages/ConversationItemTruncated'
+          - $ref: '#/components/messages/ConversationItemDeleted'
+          - $ref: '#/components/messages/ConversationItemInputAudioTranscriptionDelta'
+          - $ref: '#/components/messages/ConversationItemInputAudioTranscriptionSegment'
+          - $ref: '#/components/messages/ConversationItemInputAudioTranscriptionCompleted'
+          - $ref: '#/components/messages/ConversationItemInputAudioTranscriptionFailed'
+          - $ref: '#/components/messages/InputAudioBufferCommitted'
+          - $ref: '#/components/messages/InputAudioBufferCleared'
+          - $ref: '#/components/messages/InputAudioBufferSpeechStarted'
+          - $ref: '#/components/messages/InputAudioBufferSpeechStopped'
+          - $ref: '#/components/messages/InputAudioBufferTimeoutTriggered'
+          - $ref: '#/components/messages/InputAudioBufferDtmfEventReceived'
+          - $ref: '#/components/messages/OutputAudioBufferStarted'
+          - $ref: '#/components/messages/OutputAudioBufferStopped'
+          - $ref: '#/components/messages/OutputAudioBufferCleared'
+          - $ref: '#/components/messages/ResponseCreated'
+          - $ref: '#/components/messages/ResponseDone'
+          - $ref: '#/components/messages/ResponseOutputItemAdded'
+          - $ref: '#/components/messages/ResponseOutputItemDone'
+          - $ref: '#/components/messages/ResponseContentPartAdded'
+          - $ref: '#/components/messages/ResponseContentPartDone'
+          - $ref: '#/components/messages/ResponseOutputTextDelta'
+          - $ref: '#/components/messages/ResponseOutputTextDone'
+          - $ref: '#/components/messages/ResponseOutputAudioDelta'
+          - $ref: '#/components/messages/ResponseOutputAudioDone'
+          - $ref: '#/components/messages/ResponseOutputAudioTranscriptDelta'
+          - $ref: '#/components/messages/ResponseOutputAudioTranscriptDone'
+          - $ref: '#/components/messages/ResponseFunctionCallArgumentsDelta'
+          - $ref: '#/components/messages/ResponseFunctionCallArgumentsDone'
+          - $ref: '#/components/messages/ResponseMcpCallArgumentsDelta'
+          - $ref: '#/components/messages/ResponseMcpCallArgumentsDone'
+          - $ref: '#/components/messages/ResponseMcpCallInProgress'
+          - $ref: '#/components/messages/ResponseMcpCallCompleted'
+          - $ref: '#/components/messages/ResponseMcpCallFailed'
+          - $ref: '#/components/messages/McpListToolsInProgress'
+          - $ref: '#/components/messages/McpListToolsCompleted'
+          - $ref: '#/components/messages/McpListToolsFailed'
+          - $ref: '#/components/messages/RateLimitsUpdated'
+
+  # ---------------------------------------------------------------------------
+  # Chat Completions Streaming (SSE)
+  # ---------------------------------------------------------------------------
+  '/deployments/{deployment_id}/chat/completions':
+    description: |
+      Azure OpenAI chat completions endpoint. When the request body contains
+      `"stream": true`, the response is delivered as a `text/event-stream`
+      stream of `chat.completion.chunk` events, terminated by a `data: [DONE]`
+      sentinel.
+    servers:
+      - inference
+    parameters:
+      deployment_id:
+        description: The name of the deployed chat model.
+        schema:
+          type: string
+    subscribe:
+      operationId: subscribeChatCompletionStream
+      summary: Receive incremental `chat.completion.chunk` SSE events.
+      bindings:
+        http:
+          bindingVersion: '0.3.0'
+          type: response
+      message:
+        oneOf:
+          - $ref: '#/components/messages/ChatCompletionChunk'
+          - $ref: '#/components/messages/ChatCompletionStreamDone'
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: api-key
+      description: Azure OpenAI resource access key. Sent as the `api-key` request header.
+    entraId:
+      type: httpApiKey
+      in: header
+      name: Authorization
+      description: 'Microsoft Entra ID OAuth 2.0 bearer token, e.g. `Authorization: Bearer <token>`.'
+
+  # ---------------------------------------------------------------------------
+  # Messages - Realtime CLIENT events (sent by client -> server)
+  # ---------------------------------------------------------------------------
+  messages:
+    SessionUpdate:
+      name: session.update
+      title: session.update
+      summary: Update the session configuration on the server.
+      description: |
+        Send to update the session's default configuration. The client may send
+        this event at any time to update any field, except for `voice` which can
+        only be updated when the model has not yet emitted audio. Only the
+        provided fields are updated.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SessionUpdateEvent'
+
+    InputAudioBufferAppend:
+      name: input_audio_buffer.append
+      title: input_audio_buffer.append
+      summary: Append base64-encoded audio bytes to the user's input audio buffer.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferAppendEvent'
+
+    InputAudioBufferCommit:
+      name: input_audio_buffer.commit
+      title: input_audio_buffer.commit
+      summary: Commit the user input audio buffer, creating a new user message.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferCommitEvent'
+
+    InputAudioBufferClear:
+      name: input_audio_buffer.clear
+      title: input_audio_buffer.clear
+      summary: Clear the audio bytes in the input audio buffer.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferClearEvent'
+
+    OutputAudioBufferClear:
+      name: output_audio_buffer.clear
+      title: output_audio_buffer.clear
+      summary: Clear the model output audio buffer (WebRTC-only on OpenAI; included for parity).
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OutputAudioBufferClearEvent'
+
+    ConversationItemCreate:
+      name: conversation.item.create
+      title: conversation.item.create
+      summary: Add a new item (message, function call, function output) to the conversation.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemCreateEvent'
+
+    ConversationItemRetrieve:
+      name: conversation.item.retrieve
+      title: conversation.item.retrieve
+      summary: Retrieve the server's representation of an item in the conversation.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemRetrieveEvent'
+
+    ConversationItemTruncate:
+      name: conversation.item.truncate
+      title: conversation.item.truncate
+      summary: Truncate a previous assistant message's audio.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemTruncateEvent'
+
+    ConversationItemDelete:
+      name: conversation.item.delete
+      title: conversation.item.delete
+      summary: Remove an item from the conversation history.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemDeleteEvent'
+
+    ResponseCreate:
+      name: response.create
+      title: response.create
+      summary: Trigger a model response (out-of-band or normal).
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseCreateEvent'
+
+    ResponseCancel:
+      name: response.cancel
+      title: response.cancel
+      summary: Cancel an in-progress response.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseCancelEvent'
+
+    TranscriptionSessionUpdate:
+      name: transcription_session.update
+      title: transcription_session.update
+      summary: Update the configuration of a realtime transcription session.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TranscriptionSessionUpdateEvent'
+
+    # -------------------------------------------------------------------------
+    # Messages - Realtime SERVER events (server -> client)
+    # -------------------------------------------------------------------------
+    Error:
+      name: error
+      title: error
+      summary: An error occurred on the server.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ErrorEvent'
+
+    SessionCreated:
+      name: session.created
+      title: session.created
+      summary: A new realtime session was created.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SessionCreatedEvent'
+
+    SessionUpdated:
+      name: session.updated
+      title: session.updated
+      summary: A session was updated.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SessionUpdatedEvent'
+
+    TranscriptionSessionUpdated:
+      name: transcription_session.updated
+      title: transcription_session.updated
+      summary: A transcription session was updated.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TranscriptionSessionUpdatedEvent'
+
+    ConversationCreated:
+      name: conversation.created
+      title: conversation.created
+      summary: A conversation was created.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationCreatedEvent'
+
+    ConversationItemAdded:
+      name: conversation.item.added
+      title: conversation.item.added
+      summary: An item was added to the conversation.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemAddedEvent'
+
+    ConversationItemCreated:
+      name: conversation.item.created
+      title: conversation.item.created
+      summary: A conversation item was created (in response to `conversation.item.create`).
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemCreatedEvent'
+
+    ConversationItemDone:
+      name: conversation.item.done
+      title: conversation.item.done
+      summary: A conversation item finished streaming.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemDoneEvent'
+
+    ConversationItemRetrieved:
+      name: conversation.item.retrieved
+      title: conversation.item.retrieved
+      summary: A conversation item was retrieved.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemRetrievedEvent'
+
+    ConversationItemTruncated:
+      name: conversation.item.truncated
+      title: conversation.item.truncated
+      summary: A previous assistant audio item was truncated.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemTruncatedEvent'
+
+    ConversationItemDeleted:
+      name: conversation.item.deleted
+      title: conversation.item.deleted
+      summary: A conversation item was deleted.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemDeletedEvent'
+
+    ConversationItemInputAudioTranscriptionDelta:
+      name: conversation.item.input_audio_transcription.delta
+      title: conversation.item.input_audio_transcription.delta
+      summary: Partial user input audio transcription.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemInputAudioTranscriptionDeltaEvent'
+
+    ConversationItemInputAudioTranscriptionSegment:
+      name: conversation.item.input_audio_transcription.segment
+      title: conversation.item.input_audio_transcription.segment
+      summary: A timestamped segment of the user input audio transcription.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemInputAudioTranscriptionSegmentEvent'
+
+    ConversationItemInputAudioTranscriptionCompleted:
+      name: conversation.item.input_audio_transcription.completed
+      title: conversation.item.input_audio_transcription.completed
+      summary: Transcription of the user's input audio is complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemInputAudioTranscriptionCompletedEvent'
+
+    ConversationItemInputAudioTranscriptionFailed:
+      name: conversation.item.input_audio_transcription.failed
+      title: conversation.item.input_audio_transcription.failed
+      summary: Transcription of the user's input audio failed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ConversationItemInputAudioTranscriptionFailedEvent'
+
+    InputAudioBufferCommitted:
+      name: input_audio_buffer.committed
+      title: input_audio_buffer.committed
+      summary: The user input audio buffer was committed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferCommittedEvent'
+
+    InputAudioBufferCleared:
+      name: input_audio_buffer.cleared
+      title: input_audio_buffer.cleared
+      summary: The user input audio buffer was cleared.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferClearedEvent'
+
+    InputAudioBufferSpeechStarted:
+      name: input_audio_buffer.speech_started
+      title: input_audio_buffer.speech_started
+      summary: Server VAD detected the user started speaking.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferSpeechStartedEvent'
+
+    InputAudioBufferSpeechStopped:
+      name: input_audio_buffer.speech_stopped
+      title: input_audio_buffer.speech_stopped
+      summary: Server VAD detected the user stopped speaking.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferSpeechStoppedEvent'
+
+    InputAudioBufferTimeoutTriggered:
+      name: input_audio_buffer.timeout_triggered
+      title: input_audio_buffer.timeout_triggered
+      summary: A buffer-timeout was triggered without speech being detected.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferTimeoutTriggeredEvent'
+
+    InputAudioBufferDtmfEventReceived:
+      name: input_audio_buffer.dtmf_event_received
+      title: input_audio_buffer.dtmf_event_received
+      summary: A DTMF tone was received on the input audio buffer.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InputAudioBufferDtmfEventReceivedEvent'
+
+    OutputAudioBufferStarted:
+      name: output_audio_buffer.started
+      title: output_audio_buffer.started
+      summary: The server began streaming output audio.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OutputAudioBufferStartedEvent'
+
+    OutputAudioBufferStopped:
+      name: output_audio_buffer.stopped
+      title: output_audio_buffer.stopped
+      summary: The server stopped streaming output audio.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OutputAudioBufferStoppedEvent'
+
+    OutputAudioBufferCleared:
+      name: output_audio_buffer.cleared
+      title: output_audio_buffer.cleared
+      summary: The server cleared its output audio buffer.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OutputAudioBufferClearedEvent'
+
+    ResponseCreated:
+      name: response.created
+      title: response.created
+      summary: A new response was created.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseCreatedEvent'
+
+    ResponseDone:
+      name: response.done
+      title: response.done
+      summary: A response finished streaming (completed, cancelled, failed, or incomplete).
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseDoneEvent'
+
+    ResponseOutputItemAdded:
+      name: response.output_item.added
+      title: response.output_item.added
+      summary: A new output item was added to the response.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputItemAddedEvent'
+
+    ResponseOutputItemDone:
+      name: response.output_item.done
+      title: response.output_item.done
+      summary: An output item finished streaming.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputItemDoneEvent'
+
+    ResponseContentPartAdded:
+      name: response.content_part.added
+      title: response.content_part.added
+      summary: A new content part was added to an output item.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseContentPartAddedEvent'
+
+    ResponseContentPartDone:
+      name: response.content_part.done
+      title: response.content_part.done
+      summary: A content part finished streaming.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseContentPartDoneEvent'
+
+    ResponseOutputTextDelta:
+      name: response.output_text.delta
+      title: response.output_text.delta
+      summary: Incremental text output from the model.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputTextDeltaEvent'
+
+    ResponseOutputTextDone:
+      name: response.output_text.done
+      title: response.output_text.done
+      summary: Text output is complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputTextDoneEvent'
+
+    ResponseOutputAudioDelta:
+      name: response.output_audio.delta
+      title: response.output_audio.delta
+      summary: Incremental base64 audio output from the model.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputAudioDeltaEvent'
+
+    ResponseOutputAudioDone:
+      name: response.output_audio.done
+      title: response.output_audio.done
+      summary: Audio output is complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputAudioDoneEvent'
+
+    ResponseOutputAudioTranscriptDelta:
+      name: response.output_audio_transcript.delta
+      title: response.output_audio_transcript.delta
+      summary: Incremental transcript text for the model's audio output.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputAudioTranscriptDeltaEvent'
+
+    ResponseOutputAudioTranscriptDone:
+      name: response.output_audio_transcript.done
+      title: response.output_audio_transcript.done
+      summary: Audio output transcript is complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseOutputAudioTranscriptDoneEvent'
+
+    ResponseFunctionCallArgumentsDelta:
+      name: response.function_call_arguments.delta
+      title: response.function_call_arguments.delta
+      summary: Incremental JSON argument text for a function call.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseFunctionCallArgumentsDeltaEvent'
+
+    ResponseFunctionCallArgumentsDone:
+      name: response.function_call_arguments.done
+      title: response.function_call_arguments.done
+      summary: Function call arguments streaming complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseFunctionCallArgumentsDoneEvent'
+
+    ResponseMcpCallArgumentsDelta:
+      name: response.mcp_call_arguments.delta
+      title: response.mcp_call_arguments.delta
+      summary: Incremental MCP tool-call arguments.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseMcpCallArgumentsDeltaEvent'
+
+    ResponseMcpCallArgumentsDone:
+      name: response.mcp_call_arguments.done
+      title: response.mcp_call_arguments.done
+      summary: MCP tool-call arguments streaming complete.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseMcpCallArgumentsDoneEvent'
+
+    ResponseMcpCallInProgress:
+      name: response.mcp_call.in_progress
+      title: response.mcp_call.in_progress
+      summary: An MCP tool call is in progress.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseMcpCallInProgressEvent'
+
+    ResponseMcpCallCompleted:
+      name: response.mcp_call.completed
+      title: response.mcp_call.completed
+      summary: An MCP tool call completed successfully.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseMcpCallCompletedEvent'
+
+    ResponseMcpCallFailed:
+      name: response.mcp_call.failed
+      title: response.mcp_call.failed
+      summary: An MCP tool call failed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ResponseMcpCallFailedEvent'
+
+    McpListToolsInProgress:
+      name: mcp_list_tools.in_progress
+      title: mcp_list_tools.in_progress
+      summary: MCP server tool-listing is in progress.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/McpListToolsInProgressEvent'
+
+    McpListToolsCompleted:
+      name: mcp_list_tools.completed
+      title: mcp_list_tools.completed
+      summary: MCP server tool-listing completed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/McpListToolsCompletedEvent'
+
+    McpListToolsFailed:
+      name: mcp_list_tools.failed
+      title: mcp_list_tools.failed
+      summary: MCP server tool-listing failed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/McpListToolsFailedEvent'
+
+    RateLimitsUpdated:
+      name: rate_limits.updated
+      title: rate_limits.updated
+      summary: Updated rate-limit information emitted after each `response.created` event.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RateLimitsUpdatedEvent'
+
+    # -------------------------------------------------------------------------
+    # Messages - HTTP+SSE chat completion streaming
+    # -------------------------------------------------------------------------
+    ChatCompletionChunk:
+      name: chat.completion.chunk
+      title: chat.completion.chunk
+      summary: 'A streamed chunk of an Azure OpenAI chat completion (SSE `data:` payload).'
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/CreateChatCompletionStreamResponse'
+
+    ChatCompletionStreamDone:
+      name: '[DONE]'
+      title: '[DONE]'
+      summary: 'The terminating SSE sentinel `data: [DONE]` marking the end of the chat completion stream.'
+      contentType: text/plain
+      payload:
+        type: string
+        enum:
+          - '[DONE]'
+
+  # ===========================================================================
+  # Schemas
+  # ===========================================================================
+  schemas:
+
+    # --- Shared building blocks --------------------------------------------
+    BaseClientEvent:
+      type: object
+      properties:
+        event_id:
+          type: string
+          maxLength: 512
+          description: Optional client-generated ID used to identify this event.
+
+    BaseServerEvent:
+      type: object
+      required:
+        - event_id
+        - type
+      properties:
+        event_id:
+          type: string
+          description: The unique ID of the server event.
+
+    RealtimeError:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of error (e.g., `invalid_request_error`, `server_error`).
+        code:
+          type: string
+          nullable: true
+        message:
+          type: string
+        param:
+          type: string
+          nullable: true
+        event_id:
+          type: string
+          nullable: true
+
+    RealtimeConversationItem:
+      type: object
+      description: |
+        A conversation item (message, function call, function call output, or
+        system message). The full shape matches the OpenAI Realtime API
+        `RealtimeConversationItem` definition.
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - message
+            - function_call
+            - function_call_output
+        object:
+          type: string
+          enum:
+            - realtime.item
+        status:
+          type: string
+          enum:
+            - completed
+            - incomplete
+            - in_progress
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+            - system
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/RealtimeContentPart'
+        call_id:
+          type: string
+        name:
+          type: string
+        arguments:
+          type: string
+        output:
+          type: string
+
+    RealtimeContentPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - input_text
+            - input_audio
+            - item_reference
+            - text
+            - audio
+        text:
+          type: string
+        id:
+          type: string
+        audio:
+          type: string
+          description: Base64-encoded audio.
+        transcript:
+          type: string
+
+    RealtimeResponse:
+      type: object
+      description: A model response object emitted in `response.created` / `response.done`.
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum:
+            - realtime.response
+        status:
+          type: string
+          enum:
+            - completed
+            - cancelled
+            - failed
+            - incomplete
+            - in_progress
+        status_details:
+          type: object
+        output:
+          type: array
+          items:
+            $ref: '#/components/schemas/RealtimeConversationItem'
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        usage:
+          $ref: '#/components/schemas/RealtimeResponseUsage'
+        conversation_id:
+          type: string
+        voice:
+          type: string
+        modalities:
+          type: array
+          items:
+            type: string
+            enum:
+              - text
+              - audio
+        output_audio_format:
+          type: string
+        temperature:
+          type: number
+        max_output_tokens:
+          oneOf:
+            - type: integer
+            - type: string
+              enum:
+                - inf
+
+    RealtimeResponseUsage:
+      type: object
+      properties:
+        total_tokens:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        input_token_details:
+          type: object
+          properties:
+            cached_tokens:
+              type: integer
+            text_tokens:
+              type: integer
+            audio_tokens:
+              type: integer
+        output_token_details:
+          type: object
+          properties:
+            text_tokens:
+              type: integer
+            audio_tokens:
+              type: integer
+
+    RealtimeSession:
+      type: object
+      description: |
+        Session configuration object. On Azure, the `model` field of any
+        nested `input_audio_transcription` block must be the name of a
+        deployed Azure model, not a base OpenAI model id.
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum:
+            - realtime.session
+        model:
+          type: string
+        modalities:
+          type: array
+          items:
+            type: string
+            enum:
+              - text
+              - audio
+        instructions:
+          type: string
+        voice:
+          type: string
+        input_audio_format:
+          type: string
+          enum:
+            - pcm16
+            - g711_ulaw
+            - g711_alaw
+        output_audio_format:
+          type: string
+          enum:
+            - pcm16
+            - g711_ulaw
+            - g711_alaw
+        input_audio_transcription:
+          type: object
+          nullable: true
+          properties:
+            model:
+              type: string
+              description: |
+                **Azure deviation:** the name of an Azure OpenAI deployment
+                that hosts a transcription model (for example
+                `my-gpt-4o-transcribe-deployment`).
+            language:
+              type: string
+            prompt:
+              type: string
+        input_audio_noise_reduction:
+          type: object
+          nullable: true
+        turn_detection:
+          type: object
+          nullable: true
+        tools:
+          type: array
+        tool_choice:
+          oneOf:
+            - type: string
+            - type: object
+        temperature:
+          type: number
+        max_response_output_tokens:
+          oneOf:
+            - type: integer
+            - type: string
+              enum:
+                - inf
+
+    RealtimeTranscriptionSession:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum:
+            - realtime.transcription_session
+        modalities:
+          type: array
+          items:
+            type: string
+        input_audio_format:
+          type: string
+        input_audio_transcription:
+          type: object
+          properties:
+            model:
+              type: string
+            language:
+              type: string
+            prompt:
+              type: string
+        turn_detection:
+          type: object
+          nullable: true
+
+    RateLimitItem:
+      type: object
+      properties:
+        name:
+          type: string
+          enum:
+            - requests
+            - tokens
+            - input_tokens
+            - output_tokens
+        limit:
+          type: integer
+        remaining:
+          type: integer
+        reset_seconds:
+          type: number
+
+    # ----------------------------------------------------------------------
+    # CLIENT event schemas
+    # ----------------------------------------------------------------------
+    SessionUpdateEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - session
+          properties:
+            type:
+              type: string
+              enum:
+                - session.update
+            session:
+              $ref: '#/components/schemas/RealtimeSession'
+
+    InputAudioBufferAppendEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - audio
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.append
+            audio:
+              type: string
+              description: Base64-encoded audio bytes to append to the buffer.
+
+    InputAudioBufferCommitEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.commit
+
+    InputAudioBufferClearEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.clear
+
+    OutputAudioBufferClearEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - output_audio_buffer.clear
+
+    ConversationItemCreateEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.create
+            previous_item_id:
+              type: string
+              nullable: true
+              description: |
+                The ID of the preceding item after which the new item is
+                inserted. If null or `root`, appended at the end / start.
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ConversationItemRetrieveEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.retrieve
+            item_id:
+              type: string
+
+    ConversationItemTruncateEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - content_index
+            - audio_end_ms
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.truncate
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            audio_end_ms:
+              type: integer
+
+    ConversationItemDeleteEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.delete
+            item_id:
+              type: string
+
+    ResponseCreateEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - response.create
+            response:
+              type: object
+              nullable: true
+              description: Optional inline response configuration overrides.
+              properties:
+                modalities:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - text
+                      - audio
+                instructions:
+                  type: string
+                voice:
+                  type: string
+                output_audio_format:
+                  type: string
+                tools:
+                  type: array
+                tool_choice:
+                  oneOf:
+                    - type: string
+                    - type: object
+                temperature:
+                  type: number
+                max_output_tokens:
+                  oneOf:
+                    - type: integer
+                    - type: string
+                      enum:
+                        - inf
+                conversation:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+                input:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ResponseCancelEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - response.cancel
+            response_id:
+              type: string
+              nullable: true
+
+    TranscriptionSessionUpdateEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseClientEvent'
+        - type: object
+          required:
+            - type
+            - session
+          properties:
+            type:
+              type: string
+              enum:
+                - transcription_session.update
+            session:
+              $ref: '#/components/schemas/RealtimeTranscriptionSession'
+
+    # ----------------------------------------------------------------------
+    # SERVER event schemas
+    # ----------------------------------------------------------------------
+    ErrorEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - error
+          properties:
+            type:
+              type: string
+              enum:
+                - error
+            error:
+              $ref: '#/components/schemas/RealtimeError'
+
+    SessionCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - session
+          properties:
+            type:
+              type: string
+              enum:
+                - session.created
+            session:
+              $ref: '#/components/schemas/RealtimeSession'
+
+    SessionUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - session
+          properties:
+            type:
+              type: string
+              enum:
+                - session.updated
+            session:
+              $ref: '#/components/schemas/RealtimeSession'
+
+    TranscriptionSessionUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - session
+          properties:
+            type:
+              type: string
+              enum:
+                - transcription_session.updated
+            session:
+              $ref: '#/components/schemas/RealtimeTranscriptionSession'
+
+    ConversationCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - conversation
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.created
+            conversation:
+              type: object
+              properties:
+                id:
+                  type: string
+                object:
+                  type: string
+                  enum:
+                    - realtime.conversation
+
+    ConversationItemAddedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.added
+            previous_item_id:
+              type: string
+              nullable: true
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ConversationItemCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.created
+            previous_item_id:
+              type: string
+              nullable: true
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ConversationItemDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.done
+            previous_item_id:
+              type: string
+              nullable: true
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ConversationItemRetrievedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.retrieved
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ConversationItemTruncatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - content_index
+            - audio_end_ms
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.truncated
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            audio_end_ms:
+              type: integer
+
+    ConversationItemDeletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.deleted
+            item_id:
+              type: string
+
+    ConversationItemInputAudioTranscriptionDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.input_audio_transcription.delta
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            delta:
+              type: string
+            logprobs:
+              type: array
+              nullable: true
+              items:
+                type: object
+
+    ConversationItemInputAudioTranscriptionSegmentEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - id
+            - text
+            - start
+            - end
+            - speaker
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.input_audio_transcription.segment
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            id:
+              type: string
+            text:
+              type: string
+            start:
+              type: number
+            end:
+              type: number
+            speaker:
+              type: string
+
+    ConversationItemInputAudioTranscriptionCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - content_index
+            - transcript
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.input_audio_transcription.completed
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            transcript:
+              type: string
+            logprobs:
+              type: array
+              nullable: true
+              items:
+                type: object
+            usage:
+              type: object
+
+    ConversationItemInputAudioTranscriptionFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - content_index
+            - error
+          properties:
+            type:
+              type: string
+              enum:
+                - conversation.item.input_audio_transcription.failed
+            item_id:
+              type: string
+            content_index:
+              type: integer
+            error:
+              $ref: '#/components/schemas/RealtimeError'
+
+    InputAudioBufferCommittedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.committed
+            previous_item_id:
+              type: string
+              nullable: true
+            item_id:
+              type: string
+
+    InputAudioBufferClearedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.cleared
+
+    InputAudioBufferSpeechStartedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - audio_start_ms
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.speech_started
+            audio_start_ms:
+              type: integer
+            item_id:
+              type: string
+
+    InputAudioBufferSpeechStoppedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - audio_end_ms
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.speech_stopped
+            audio_end_ms:
+              type: integer
+            item_id:
+              type: string
+
+    InputAudioBufferTimeoutTriggeredEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - audio_start_ms
+            - audio_end_ms
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.timeout_triggered
+            audio_start_ms:
+              type: integer
+            audio_end_ms:
+              type: integer
+            item_id:
+              type: string
+
+    InputAudioBufferDtmfEventReceivedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - digit
+          properties:
+            type:
+              type: string
+              enum:
+                - input_audio_buffer.dtmf_event_received
+            digit:
+              type: string
+
+    OutputAudioBufferStartedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+          properties:
+            type:
+              type: string
+              enum:
+                - output_audio_buffer.started
+            response_id:
+              type: string
+
+    OutputAudioBufferStoppedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+          properties:
+            type:
+              type: string
+              enum:
+                - output_audio_buffer.stopped
+            response_id:
+              type: string
+
+    OutputAudioBufferClearedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+          properties:
+            type:
+              type: string
+              enum:
+                - output_audio_buffer.cleared
+            response_id:
+              type: string
+
+    ResponseCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response
+          properties:
+            type:
+              type: string
+              enum:
+                - response.created
+            response:
+              $ref: '#/components/schemas/RealtimeResponse'
+
+    ResponseDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response
+          properties:
+            type:
+              type: string
+              enum:
+                - response.done
+            response:
+              $ref: '#/components/schemas/RealtimeResponse'
+
+    ResponseOutputItemAddedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - output_index
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_item.added
+            response_id:
+              type: string
+            output_index:
+              type: integer
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ResponseOutputItemDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - output_index
+            - item
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_item.done
+            response_id:
+              type: string
+            output_index:
+              type: integer
+            item:
+              $ref: '#/components/schemas/RealtimeConversationItem'
+
+    ResponseContentPartAddedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - part
+          properties:
+            type:
+              type: string
+              enum:
+                - response.content_part.added
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            part:
+              $ref: '#/components/schemas/RealtimeContentPart'
+
+    ResponseContentPartDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - part
+          properties:
+            type:
+              type: string
+              enum:
+                - response.content_part.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            part:
+              $ref: '#/components/schemas/RealtimeContentPart'
+
+    ResponseOutputTextDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_text.delta
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            delta:
+              type: string
+
+    ResponseOutputTextDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - text
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_text.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            text:
+              type: string
+
+    ResponseOutputAudioDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_audio.delta
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            delta:
+              type: string
+              description: Base64-encoded audio data delta.
+
+    ResponseOutputAudioDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_audio.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+
+    ResponseOutputAudioTranscriptDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_audio_transcript.delta
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            delta:
+              type: string
+
+    ResponseOutputAudioTranscriptDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - content_index
+            - transcript
+          properties:
+            type:
+              type: string
+              enum:
+                - response.output_audio_transcript.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            content_index:
+              type: integer
+            transcript:
+              type: string
+
+    ResponseFunctionCallArgumentsDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - call_id
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - response.function_call_arguments.delta
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            call_id:
+              type: string
+            delta:
+              type: string
+
+    ResponseFunctionCallArgumentsDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - call_id
+            - arguments
+          properties:
+            type:
+              type: string
+              enum:
+                - response.function_call_arguments.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            call_id:
+              type: string
+            arguments:
+              type: string
+
+    ResponseMcpCallArgumentsDeltaEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - delta
+          properties:
+            type:
+              type: string
+              enum:
+                - response.mcp_call_arguments.delta
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            delta:
+              type: string
+            obfuscation:
+              type: string
+
+    ResponseMcpCallArgumentsDoneEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - response_id
+            - item_id
+            - output_index
+            - arguments
+          properties:
+            type:
+              type: string
+              enum:
+                - response.mcp_call_arguments.done
+            response_id:
+              type: string
+            item_id:
+              type: string
+            output_index:
+              type: integer
+            arguments:
+              type: string
+
+    ResponseMcpCallInProgressEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - output_index
+          properties:
+            type:
+              type: string
+              enum:
+                - response.mcp_call.in_progress
+            item_id:
+              type: string
+            output_index:
+              type: integer
+
+    ResponseMcpCallCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - output_index
+          properties:
+            type:
+              type: string
+              enum:
+                - response.mcp_call.completed
+            item_id:
+              type: string
+            output_index:
+              type: integer
+
+    ResponseMcpCallFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+            - output_index
+          properties:
+            type:
+              type: string
+              enum:
+                - response.mcp_call.failed
+            item_id:
+              type: string
+            output_index:
+              type: integer
+
+    McpListToolsInProgressEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - mcp_list_tools.in_progress
+            item_id:
+              type: string
+
+    McpListToolsCompletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - mcp_list_tools.completed
+            item_id:
+              type: string
+
+    McpListToolsFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - item_id
+          properties:
+            type:
+              type: string
+              enum:
+                - mcp_list_tools.failed
+            item_id:
+              type: string
+
+    RateLimitsUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/BaseServerEvent'
+        - type: object
+          required:
+            - type
+            - rate_limits
+          properties:
+            type:
+              type: string
+              enum:
+                - rate_limits.updated
+            rate_limits:
+              type: array
+              items:
+                $ref: '#/components/schemas/RateLimitItem'
+
+    # ----------------------------------------------------------------------
+    # Chat Completions SSE chunk
+    # ----------------------------------------------------------------------
+    CreateChatCompletionStreamResponse:
+      type: object
+      description: |
+        A streamed chunk of an Azure OpenAI chat completion response, delivered
+        as the JSON `data:` payload of each SSE event. Mirrors the
+        `createChatCompletionStreamResponse` schema in the Azure OpenAI data-plane
+        OpenAPI definition.
+      required:
+        - id
+        - choices
+        - created
+        - model
+        - object
+      properties:
+        id:
+          type: string
+          description: A unique identifier for the chat completion. Each chunk has the same ID.
+        choices:
+          type: array
+          items:
+            type: object
+            required:
+              - delta
+              - finish_reason
+              - index
+            properties:
+              delta:
+                $ref: '#/components/schemas/ChatCompletionStreamResponseDelta'
+              logprobs:
+                type: object
+                nullable: true
+              finish_reason:
+                type: string
+                nullable: true
+                enum:
+                  - stop
+                  - length
+                  - tool_calls
+                  - content_filter
+                  - function_call
+              index:
+                type: integer
+              content_filter_results:
+                type: object
+                description: Azure-only per-choice content-filter result block.
+        created:
+          type: integer
+          description: Unix timestamp (seconds) for the chunk. Same for every chunk in the stream.
+        model:
+          type: string
+          description: The model that generated the completion.
+        system_fingerprint:
+          type: string
+          description: Backend configuration fingerprint.
+        object:
+          type: string
+          enum:
+            - chat.completion.chunk
+        usage:
+          type: object
+          nullable: true
+          description: Usage statistics; populated on the final chunk when `stream_options.include_usage = true`.
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+        prompt_filter_results:
+          type: array
+          description: Azure-only content-filter results for the input prompts.
+          items:
+            type: object
+
+    ChatCompletionStreamResponseDelta:
+      type: object
+      description: An incremental delta on a streamed chat completion.
+      properties:
+        content:
+          type: string
+          nullable: true
+          description: The contents of the chunk message.
+        function_call:
+          type: object
+          deprecated: true
+          description: Deprecated; replaced by `tool_calls`.
+          properties:
+            arguments:
+              type: string
+            name:
+              type: string
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatCompletionMessageToolCallChunk'
+        role:
+          type: string
+          enum:
+            - system
+            - user
+            - assistant
+            - tool
+        refusal:
+          type: string
+          nullable: true
+
+    ChatCompletionMessageToolCallChunk:
+      type: object
+      properties:
+        index:
+          type: integer
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - function
+        function:
+          type: object
+          properties:
+            name:
+              type: string
+            arguments:
+              type: string

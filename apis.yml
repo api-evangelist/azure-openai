@@ -22,7 +22,7 @@ tags:
   - Embeddings
 url: https://raw.githubusercontent.com/api-evangelist/azure-openai/refs/heads/main/apis.yml
 created: '2026-05-11'
-modified: '2026-05-11'
+modified: '2026-05-29'
 specificationVersion: '0.19'
 apis:
   - aid: azure-openai:inference-api
@@ -49,6 +49,8 @@ apis:
         url: https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest
       - type: OpenAPI Source
         url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
+      - type: AsyncAPI
+        url: https://raw.githubusercontent.com/api-evangelist/azure-openai/refs/heads/main/asyncapi/azure-openai-asyncapi.yml
   - aid: azure-openai:responses-api
     name: Azure OpenAI Responses API
     description: >-

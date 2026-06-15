@@ -1,0 +1,1180 @@
+"""
+Azure OpenAI Service GraphQL Schema
+Conceptual schema derived from Azure OpenAI Service REST API covering
+completions, chat, images, audio, embeddings, fine-tuning, and batch operations.
+"""
+
+# -----------------------------------------------------------------------
+# Scalar types
+# -----------------------------------------------------------------------
+
+scalar DateTime
+scalar JSON
+scalar Upload
+
+# -----------------------------------------------------------------------
+# Enums
+# -----------------------------------------------------------------------
+
+enum ChatRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+  FUNCTION
+}
+
+enum FinishReason {
+  STOP
+  LENGTH
+  CONTENT_FILTER
+  TOOL_CALLS
+  FUNCTION_CALL
+  NULL
+}
+
+enum ModelStatus {
+  AVAILABLE
+  DEPRECATED
+  PREVIEW
+  RETIRED
+}
+
+enum DeploymentStatus {
+  CREATING
+  SCALING
+  RUNNING
+  DELETING
+  FAILED
+  CANCELED
+}
+
+enum DeploymentScaleType {
+  MANUAL
+  STANDARD
+  PROVISIONED
+  PROVISIONED_MANAGED
+}
+
+enum FineTuningJobStatus {
+  VALIDATING_FILES
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum BatchStatus {
+  VALIDATING
+  FAILED
+  IN_PROGRESS
+  FINALIZING
+  COMPLETED
+  EXPIRED
+  CANCELLING
+  CANCELLED
+}
+
+enum ImageSize {
+  SIZE_256x256
+  SIZE_512x512
+  SIZE_1024x1024
+  SIZE_1792x1024
+  SIZE_1024x1792
+}
+
+enum ImageQuality {
+  STANDARD
+  HD
+}
+
+enum ImageStyle {
+  VIVID
+  NATURAL
+}
+
+enum ImageResponseFormat {
+  URL
+  B64_JSON
+}
+
+enum AudioFormat {
+  MP3
+  MP4
+  MPEG
+  MPGA
+  M4A
+  OGG
+  WAV
+  WEBM
+}
+
+enum AudioResponseFormat {
+  JSON
+  TEXT
+  SRT
+  VERBOSE_JSON
+  VTT
+}
+
+enum EmbeddingEncoding {
+  FLOAT
+  BASE64
+}
+
+enum ContentFilterSeverity {
+  SAFE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ContentFilterResult {
+  FILTERED
+  NOT_FILTERED
+}
+
+enum ToolType {
+  FUNCTION
+  CODE_INTERPRETER
+  FILE_SEARCH
+}
+
+enum TokenType {
+  PROMPT
+  COMPLETION
+  TOTAL
+}
+
+enum FilePurpose {
+  FINE_TUNE
+  FINE_TUNE_RESULTS
+  ASSISTANTS
+  ASSISTANTS_OUTPUT
+  BATCH
+  BATCH_OUTPUT
+}
+
+enum FileStatus {
+  UPLOADED
+  PENDING
+  RUNNING
+  PROCESSED
+  ERROR
+  DELETING
+  DELETED
+}
+
+enum ResponseFormat {
+  TEXT
+  JSON_OBJECT
+  JSON_SCHEMA
+}
+
+enum VoiceType {
+  ALLOY
+  ECHO
+  FABLE
+  ONYX
+  NOVA
+  SHIMMER
+}
+
+enum SpeechResponseFormat {
+  MP3
+  OPUS
+  AAC
+  FLAC
+  WAV
+  PCM
+}
+
+# -----------------------------------------------------------------------
+# Core entity types
+# -----------------------------------------------------------------------
+
+type Model {
+  id: ID!
+  object: String!
+  created: DateTime!
+  ownedBy: String!
+  capabilities: ModelCapabilities!
+  lifecycleStatus: ModelStatus!
+  deprecation: ModelDeprecation
+}
+
+type ModelCapabilities {
+  chatCompletion: Boolean!
+  completion: Boolean!
+  embeddings: Boolean!
+  imageDalle: Boolean!
+  fineTune: Boolean!
+  inference: Boolean!
+  audio: Boolean!
+  visionEnabled: Boolean!
+  maxContextTokens: Int
+}
+
+type ModelDeprecation {
+  fineTune: DateTime
+  inference: DateTime
+}
+
+type Deployment {
+  id: ID!
+  name: String!
+  model: String!
+  modelVersion: String
+  status: DeploymentStatus!
+  scaleSettings: ScaleSettings!
+  provisioningState: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  rateLimits: [RateLimit!]
+  contentFilters: ContentFilterPolicy
+}
+
+type ScaleSettings {
+  scaleType: DeploymentScaleType!
+  capacity: Int
+}
+
+type RateLimit {
+  key: String!
+  renewalPeriod: Int!
+  count: Int!
+}
+
+# -----------------------------------------------------------------------
+# Chat Completion types
+# -----------------------------------------------------------------------
+
+type ChatCompletion {
+  id: ID!
+  object: String!
+  created: DateTime!
+  model: String!
+  choices: [ChatChoice!]!
+  usage: CompletionUsage!
+  systemFingerprint: String
+  contentFilterResults: ContentFilterResults
+}
+
+type ChatChoice {
+  index: Int!
+  message: ChatMessage!
+  finishReason: FinishReason
+  delta: ChatMessageDelta
+  logprobs: ChoiceLogprobs
+  contentFilterResults: ContentFilterResults
+}
+
+type ChatMessage {
+  role: ChatRole!
+  content: String
+  name: String
+  toolCalls: [ToolCall!]
+  functionCall: FunctionCall
+  refusal: String
+}
+
+type ChatMessageDelta {
+  role: ChatRole
+  content: String
+  toolCalls: [ToolCallDelta!]
+  functionCall: FunctionCallDelta
+}
+
+type ToolCall {
+  id: ID!
+  type: ToolType!
+  function: FunctionCallInfo!
+}
+
+type ToolCallDelta {
+  index: Int!
+  id: String
+  type: ToolType
+  function: FunctionCallInfoDelta
+}
+
+type FunctionCallInfo {
+  name: String!
+  arguments: String!
+}
+
+type FunctionCallInfoDelta {
+  name: String
+  arguments: String
+}
+
+type FunctionCall {
+  name: String!
+  arguments: String!
+}
+
+type FunctionCallDelta {
+  name: String
+  arguments: String
+}
+
+type ChoiceLogprobs {
+  content: [TokenLogprob!]
+  refusal: [TokenLogprob!]
+}
+
+type TokenLogprob {
+  token: String!
+  logprob: Float!
+  bytes: [Int!]
+  topLogprobs: [TopLogprob!]
+}
+
+type TopLogprob {
+  token: String!
+  logprob: Float!
+  bytes: [Int!]
+}
+
+# -----------------------------------------------------------------------
+# Completion (legacy) types
+# -----------------------------------------------------------------------
+
+type Completion {
+  id: ID!
+  object: String!
+  created: DateTime!
+  model: String!
+  choices: [CompletionChoice!]!
+  usage: CompletionUsage!
+}
+
+type CompletionChoice {
+  text: String!
+  index: Int!
+  finishReason: FinishReason
+  logprobs: CompletionLogprobs
+}
+
+type CompletionLogprobs {
+  tokens: [String!]
+  tokenLogprobs: [Float!]
+  topLogprobs: [JSON!]
+  textOffset: [Int!]
+}
+
+type CompletionUsage {
+  promptTokens: Int!
+  completionTokens: Int
+  totalTokens: Int!
+  promptTokensDetails: PromptTokensDetails
+  completionTokensDetails: CompletionTokensDetails
+}
+
+type PromptTokensDetails {
+  cachedTokens: Int
+  audioTokens: Int
+}
+
+type CompletionTokensDetails {
+  reasoningTokens: Int
+  audioTokens: Int
+  acceptedPredictionTokens: Int
+  rejectedPredictionTokens: Int
+}
+
+# -----------------------------------------------------------------------
+# Embeddings types
+# -----------------------------------------------------------------------
+
+type EmbeddingResponse {
+  object: String!
+  model: String!
+  data: [Embedding!]!
+  usage: EmbeddingUsage!
+}
+
+type Embedding {
+  object: String!
+  index: Int!
+  embedding: [Float!]!
+}
+
+type EmbeddingUsage {
+  promptTokens: Int!
+  totalTokens: Int!
+}
+
+# -----------------------------------------------------------------------
+# Image types
+# -----------------------------------------------------------------------
+
+type ImageGenerationResponse {
+  created: DateTime!
+  data: [GeneratedImage!]!
+}
+
+type GeneratedImage {
+  url: String
+  b64Json: String
+  revisedPrompt: String
+  contentFilterResults: ContentFilterResults
+}
+
+# -----------------------------------------------------------------------
+# Audio types
+# -----------------------------------------------------------------------
+
+type AudioTranscription {
+  text: String!
+  task: String
+  language: String
+  duration: Float
+  segments: [AudioSegment!]
+  words: [AudioWord!]
+}
+
+type AudioTranslation {
+  text: String!
+  task: String
+  language: String
+  duration: Float
+  segments: [AudioSegment!]
+}
+
+type AudioSegment {
+  id: Int!
+  seek: Float!
+  start: Float!
+  end: Float!
+  text: String!
+  tokens: [Int!]!
+  temperature: Float!
+  avgLogprob: Float!
+  compressionRatio: Float!
+  noSpeechProb: Float!
+}
+
+type AudioWord {
+  word: String!
+  start: Float!
+  end: Float!
+}
+
+type SpeechResponse {
+  audioData: String!
+  contentType: String!
+}
+
+# -----------------------------------------------------------------------
+# Fine-tuning types
+# -----------------------------------------------------------------------
+
+type FineTuningJob {
+  id: ID!
+  object: String!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  model: String!
+  fineTunedModel: String
+  organizationId: String!
+  status: FineTuningJobStatus!
+  hyperparameters: FineTuningHyperparameters!
+  trainingFile: String!
+  validationFile: String
+  resultFiles: [String!]!
+  trainedTokens: Int
+  error: FineTuningError
+  integrations: [FineTuningIntegration!]
+  seed: Int
+  estimatedFinish: DateTime
+}
+
+type FineTuningHyperparameters {
+  nEpochs: Int
+  batchSize: Int
+  learningRateMultiplier: Float
+}
+
+type FineTuningError {
+  code: String!
+  message: String!
+  param: String
+}
+
+type FineTuningIntegration {
+  type: String!
+  wandb: WandBIntegration
+}
+
+type WandBIntegration {
+  project: String!
+  name: String
+  entity: String
+  tags: [String!]
+}
+
+type FineTuningEvent {
+  id: ID!
+  object: String!
+  createdAt: DateTime!
+  level: String!
+  message: String!
+  data: JSON
+  type: String!
+}
+
+type FineTuningCheckpoint {
+  id: ID!
+  object: String!
+  createdAt: DateTime!
+  fineTunedModelCheckpoint: String!
+  stepNumber: Int!
+  metrics: CheckpointMetrics!
+  fineTuningJobId: String!
+}
+
+type CheckpointMetrics {
+  step: Int
+  trainLoss: Float
+  trainMeanTokenAccuracy: Float
+  validLoss: Float
+  validMeanTokenAccuracy: Float
+  fullValidLoss: Float
+  fullValidMeanTokenAccuracy: Float
+}
+
+# -----------------------------------------------------------------------
+# Batch types
+# -----------------------------------------------------------------------
+
+type Batch {
+  id: ID!
+  object: String!
+  endpoint: String!
+  errors: BatchErrors
+  inputFileId: String!
+  completionWindow: String!
+  status: BatchStatus!
+  outputFileId: String
+  errorFileId: String
+  createdAt: DateTime!
+  inProgressAt: DateTime
+  expiresAt: DateTime
+  finalizingAt: DateTime
+  completedAt: DateTime
+  failedAt: DateTime
+  expiredAt: DateTime
+  cancellingAt: DateTime
+  cancelledAt: DateTime
+  requestCounts: BatchRequestCounts!
+  metadata: JSON
+}
+
+type BatchErrors {
+  object: String
+  data: [BatchError!]
+}
+
+type BatchError {
+  code: String!
+  message: String!
+  param: String
+  line: Int
+}
+
+type BatchRequestCounts {
+  total: Int!
+  completed: Int!
+  failed: Int!
+}
+
+# -----------------------------------------------------------------------
+# File types
+# -----------------------------------------------------------------------
+
+type File {
+  id: ID!
+  object: String!
+  bytes: Int!
+  createdAt: DateTime!
+  filename: String!
+  purpose: FilePurpose!
+  status: FileStatus!
+  statusDetails: String
+}
+
+type FileContent {
+  content: String!
+  contentType: String!
+}
+
+# -----------------------------------------------------------------------
+# Content filter types
+# -----------------------------------------------------------------------
+
+type ContentFilterResults {
+  hate: ContentFilterCategory
+  selfHarm: ContentFilterCategory
+  sexual: ContentFilterCategory
+  violence: ContentFilterCategory
+  jailbreak: ContentFilterDetection
+  profanity: ContentFilterDetection
+  customBlocklists: ContentFilterBlocklist
+  error: ContentFilterError
+}
+
+type ContentFilterCategory {
+  filtered: Boolean!
+  severity: ContentFilterSeverity!
+}
+
+type ContentFilterDetection {
+  filtered: Boolean!
+  detected: Boolean!
+}
+
+type ContentFilterBlocklist {
+  filtered: Boolean!
+  details: [BlocklistDetail!]
+}
+
+type BlocklistDetail {
+  id: String!
+  filtered: Boolean!
+}
+
+type ContentFilterError {
+  code: String!
+  message: String!
+  status: Int!
+  innererror: ContentFilterInnerError
+}
+
+type ContentFilterInnerError {
+  code: String!
+  contentFilterResult: ContentFilterResults
+}
+
+type ContentFilterPolicy {
+  name: String!
+  enabled: Boolean!
+}
+
+# -----------------------------------------------------------------------
+# Tool/Function definition types
+# -----------------------------------------------------------------------
+
+type FunctionDefinition {
+  name: String!
+  description: String
+  parameters: JSON
+  strict: Boolean
+}
+
+type ToolDefinition {
+  type: ToolType!
+  function: FunctionDefinition!
+}
+
+# -----------------------------------------------------------------------
+# Streaming/Subscription types
+# -----------------------------------------------------------------------
+
+type ChatCompletionChunk {
+  id: ID!
+  object: String!
+  created: DateTime!
+  model: String!
+  choices: [ChatChoiceChunk!]!
+  usage: CompletionUsage
+  systemFingerprint: String
+}
+
+type ChatChoiceChunk {
+  index: Int!
+  delta: ChatMessageDelta!
+  finishReason: FinishReason
+  logprobs: ChoiceLogprobs
+  contentFilterOffsets: ContentFilterOffsets
+  contentFilterResults: ContentFilterResults
+}
+
+type ContentFilterOffsets {
+  checkOffset: Int!
+  startOffset: Int!
+  endOffset: Int!
+}
+
+# -----------------------------------------------------------------------
+# Pagination / Connection types
+# -----------------------------------------------------------------------
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ModelConnection {
+  edges: [ModelEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ModelEdge {
+  node: Model!
+  cursor: String!
+}
+
+type DeploymentConnection {
+  edges: [DeploymentEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type DeploymentEdge {
+  node: Deployment!
+  cursor: String!
+}
+
+type FineTuningJobConnection {
+  edges: [FineTuningJobEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+  hasMore: Boolean!
+}
+
+type FineTuningJobEdge {
+  node: FineTuningJob!
+  cursor: String!
+}
+
+type FineTuningEventConnection {
+  edges: [FineTuningEventEdge!]!
+  pageInfo: PageInfo!
+  hasMore: Boolean!
+}
+
+type FineTuningEventEdge {
+  node: FineTuningEvent!
+  cursor: String!
+}
+
+type BatchConnection {
+  edges: [BatchEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type BatchEdge {
+  node: Batch!
+  cursor: String!
+}
+
+type FileConnection {
+  edges: [FileEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type FileEdge {
+  node: File!
+  cursor: String!
+}
+
+# -----------------------------------------------------------------------
+# Input types — Chat Completions
+# -----------------------------------------------------------------------
+
+input ChatCompletionInput {
+  model: String!
+  messages: [ChatMessageInput!]!
+  maxTokens: Int
+  maxCompletionTokens: Int
+  temperature: Float
+  topP: Float
+  n: Int
+  stream: Boolean
+  stop: [String!]
+  presencePenalty: Float
+  frequencyPenalty: Float
+  logitBias: JSON
+  logprobs: Boolean
+  topLogprobs: Int
+  user: String
+  tools: [ToolDefinitionInput!]
+  toolChoice: JSON
+  parallelToolCalls: Boolean
+  responseFormat: ResponseFormatInput
+  seed: Int
+  functions: [FunctionDefinitionInput!]
+  functionCall: JSON
+  dataSources: [DataSourceInput!]
+  enhancements: EnhancementsInput
+}
+
+input ChatMessageInput {
+  role: ChatRole!
+  content: String
+  name: String
+  toolCallId: String
+  toolCalls: [ToolCallInput!]
+  functionCall: FunctionCallInput
+}
+
+input ToolCallInput {
+  id: ID!
+  type: ToolType!
+  function: FunctionCallInfoInput!
+}
+
+input FunctionCallInfoInput {
+  name: String!
+  arguments: String!
+}
+
+input FunctionCallInput {
+  name: String!
+  arguments: String!
+}
+
+input ToolDefinitionInput {
+  type: ToolType!
+  function: FunctionDefinitionInput!
+}
+
+input FunctionDefinitionInput {
+  name: String!
+  description: String
+  parameters: JSON
+  strict: Boolean
+}
+
+input ResponseFormatInput {
+  type: ResponseFormat!
+  jsonSchema: JSON
+}
+
+input DataSourceInput {
+  type: String!
+  parameters: JSON!
+}
+
+input EnhancementsInput {
+  ocr: EnhancementSettingInput
+  grounding: EnhancementSettingInput
+}
+
+input EnhancementSettingInput {
+  enabled: Boolean!
+}
+
+# -----------------------------------------------------------------------
+# Input types — Completions
+# -----------------------------------------------------------------------
+
+input CompletionInput {
+  model: String!
+  prompt: String!
+  suffix: String
+  maxTokens: Int
+  temperature: Float
+  topP: Float
+  n: Int
+  stream: Boolean
+  logprobs: Int
+  echo: Boolean
+  stop: [String!]
+  presencePenalty: Float
+  frequencyPenalty: Float
+  bestOf: Int
+  logitBias: JSON
+  user: String
+}
+
+# -----------------------------------------------------------------------
+# Input types — Embeddings
+# -----------------------------------------------------------------------
+
+input EmbeddingInput {
+  model: String!
+  input: [String!]!
+  encodingFormat: EmbeddingEncoding
+  dimensions: Int
+  user: String
+}
+
+# -----------------------------------------------------------------------
+# Input types — Images
+# -----------------------------------------------------------------------
+
+input ImageGenerationInput {
+  model: String
+  prompt: String!
+  n: Int
+  size: ImageSize
+  quality: ImageQuality
+  style: ImageStyle
+  responseFormat: ImageResponseFormat
+  user: String
+}
+
+input ImageEditInput {
+  image: Upload!
+  prompt: String!
+  mask: Upload
+  model: String
+  n: Int
+  size: ImageSize
+  responseFormat: ImageResponseFormat
+  user: String
+}
+
+input ImageVariationInput {
+  image: Upload!
+  model: String
+  n: Int
+  size: ImageSize
+  responseFormat: ImageResponseFormat
+  user: String
+}
+
+# -----------------------------------------------------------------------
+# Input types — Audio
+# -----------------------------------------------------------------------
+
+input AudioTranscriptionInput {
+  file: Upload!
+  model: String!
+  language: String
+  prompt: String
+  responseFormat: AudioResponseFormat
+  temperature: Float
+  timestampGranularities: [String!]
+}
+
+input AudioTranslationInput {
+  file: Upload!
+  model: String!
+  prompt: String
+  responseFormat: AudioResponseFormat
+  temperature: Float
+}
+
+input SpeechInput {
+  model: String!
+  input: String!
+  voice: VoiceType!
+  responseFormat: SpeechResponseFormat
+  speed: Float
+}
+
+# -----------------------------------------------------------------------
+# Input types — Fine-tuning
+# -----------------------------------------------------------------------
+
+input CreateFineTuningJobInput {
+  model: String!
+  trainingFile: String!
+  validationFile: String
+  hyperparameters: FineTuningHyperparametersInput
+  suffix: String
+  integrations: [FineTuningIntegrationInput!]
+  seed: Int
+}
+
+input FineTuningHyperparametersInput {
+  nEpochs: Int
+  batchSize: Int
+  learningRateMultiplier: Float
+}
+
+input FineTuningIntegrationInput {
+  type: String!
+  wandb: WandBIntegrationInput
+}
+
+input WandBIntegrationInput {
+  project: String!
+  name: String
+  entity: String
+  tags: [String!]
+}
+
+# -----------------------------------------------------------------------
+# Input types — Batch
+# -----------------------------------------------------------------------
+
+input CreateBatchInput {
+  inputFileId: String!
+  endpoint: String!
+  completionWindow: String!
+  metadata: JSON
+}
+
+# -----------------------------------------------------------------------
+# Input types — Deployments
+# -----------------------------------------------------------------------
+
+input CreateDeploymentInput {
+  model: String!
+  name: String!
+  scaleSettings: ScaleSettingsInput!
+  contentFilters: ContentFilterPolicyInput
+}
+
+input UpdateDeploymentInput {
+  scaleSettings: ScaleSettingsInput
+  contentFilters: ContentFilterPolicyInput
+}
+
+input ScaleSettingsInput {
+  scaleType: DeploymentScaleType!
+  capacity: Int
+}
+
+input ContentFilterPolicyInput {
+  name: String!
+  enabled: Boolean!
+}
+
+# -----------------------------------------------------------------------
+# Query root
+# -----------------------------------------------------------------------
+
+type Query {
+  """List all available models."""
+  models(first: Int, after: String, last: Int, before: String): ModelConnection!
+
+  """Get a specific model by ID."""
+  model(id: ID!): Model
+
+  """List deployments for the current resource."""
+  deployments(first: Int, after: String): DeploymentConnection!
+
+  """Get a specific deployment by name."""
+  deployment(name: String!): Deployment
+
+  """List files uploaded to the account."""
+  files(
+    purpose: FilePurpose
+    first: Int
+    after: String
+  ): FileConnection!
+
+  """Get a specific file by ID."""
+  file(id: ID!): File
+
+  """Retrieve the content of a file."""
+  fileContent(id: ID!): FileContent
+
+  """List fine-tuning jobs."""
+  fineTuningJobs(
+    after: String
+    limit: Int
+  ): FineTuningJobConnection!
+
+  """Get a specific fine-tuning job."""
+  fineTuningJob(id: ID!): FineTuningJob
+
+  """List events for a fine-tuning job."""
+  fineTuningJobEvents(
+    jobId: ID!
+    after: String
+    limit: Int
+  ): FineTuningEventConnection!
+
+  """List checkpoints for a fine-tuning job."""
+  fineTuningJobCheckpoints(
+    jobId: ID!
+    after: String
+    limit: Int
+  ): [FineTuningCheckpoint!]!
+
+  """List batch jobs."""
+  batches(after: String, limit: Int): BatchConnection!
+
+  """Get a specific batch job."""
+  batch(id: ID!): Batch
+}
+
+# -----------------------------------------------------------------------
+# Mutation root
+# -----------------------------------------------------------------------
+
+type Mutation {
+  """Create a chat completion."""
+  createChatCompletion(input: ChatCompletionInput!): ChatCompletion!
+
+  """Create a legacy text completion."""
+  createCompletion(input: CompletionInput!): Completion!
+
+  """Create text embeddings."""
+  createEmbedding(input: EmbeddingInput!): EmbeddingResponse!
+
+  """Generate an image using DALL-E."""
+  generateImage(input: ImageGenerationInput!): ImageGenerationResponse!
+
+  """Edit an existing image."""
+  editImage(input: ImageEditInput!): ImageGenerationResponse!
+
+  """Create variations of an image."""
+  createImageVariation(input: ImageVariationInput!): ImageGenerationResponse!
+
+  """Transcribe audio to text."""
+  transcribeAudio(input: AudioTranscriptionInput!): AudioTranscription!
+
+  """Translate audio to English text."""
+  translateAudio(input: AudioTranslationInput!): AudioTranslation!
+
+  """Generate speech audio from text."""
+  generateSpeech(input: SpeechInput!): SpeechResponse!
+
+  """Upload a file for fine-tuning or batch."""
+  uploadFile(file: Upload!, purpose: FilePurpose!): File!
+
+  """Delete a file."""
+  deleteFile(id: ID!): Boolean!
+
+  """Create a fine-tuning job."""
+  createFineTuningJob(input: CreateFineTuningJobInput!): FineTuningJob!
+
+  """Cancel a fine-tuning job."""
+  cancelFineTuningJob(id: ID!): FineTuningJob!
+
+  """Create a batch processing job."""
+  createBatch(input: CreateBatchInput!): Batch!
+
+  """Cancel a batch processing job."""
+  cancelBatch(id: ID!): Batch!
+
+  """Create a new model deployment."""
+  createDeployment(input: CreateDeploymentInput!): Deployment!
+
+  """Update an existing deployment."""
+  updateDeployment(name: String!, input: UpdateDeploymentInput!): Deployment!
+
+  """Delete a deployment."""
+  deleteDeployment(name: String!): Boolean!
+}
+
+# -----------------------------------------------------------------------
+# Subscription root
+# -----------------------------------------------------------------------
+
+type Subscription {
+  """Stream chat completion chunks in real time."""
+  chatCompletionStream(input: ChatCompletionInput!): ChatCompletionChunk!
+
+  """Stream fine-tuning job events as they are emitted."""
+  fineTuningJobEvents(jobId: ID!): FineTuningEvent!
+
+  """Watch deployment status changes."""
+  deploymentStatusChanged(name: String!): Deployment!
+
+  """Watch batch job status changes."""
+  batchStatusChanged(id: ID!): Batch!
+}

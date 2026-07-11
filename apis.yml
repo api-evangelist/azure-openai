@@ -78,6 +78,12 @@ apis:
   - type: Documentation
     url: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
 common:
+- type: VulnerabilityDisclosure
+  url: security/azure-openai-vulnerability-disclosure.yml
+- type: DomainSecurity
+  url: security/azure-openai-domain-security.yml
+- type: Authentication
+  url: authentication/azure-openai-authentication.yml
 - type: OAuthScopes
   url: scopes/azure-openai-scopes.yml
 - type: Website

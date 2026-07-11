@@ -78,6 +78,8 @@ apis:
   - type: Documentation
     url: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
 common:
+- type: OAuthScopes
+  url: scopes/azure-openai-scopes.yml
 - type: Website
   url: https://azure.microsoft.com/en-us/products/ai-services/openai-service
 - type: Documentation
@@ -96,6 +98,8 @@ common:
   url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
 - type: LlmsText
   url: https://azure.microsoft.com/llms.txt
+- url: https://techcommunity.microsoft.com/t5/s/gxcuf89792/rss/board?board.id=azure-ai-foundry-blog
+  type: Blog
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com

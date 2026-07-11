@@ -1,0 +1,17 @@
+generated: '2026-07-11'
+method: derived
+source: openapi/azure-openai-openapi.yml
+schemes:
+- name: entra
+  source: openapi/azure-openai-openapi.yml
+  flows:
+  - flow: clientCredentials
+    tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
+  description: Microsoft Entra ID OAuth 2.0 bearer token
+scopes:
+- scope: https://cognitiveservices.azure.com/.default
+  description: Azure Cognitive Services data plane
+  flows:
+  - clientCredentials
+  sources:
+  - openapi/azure-openai-openapi.yml

@@ -1,0 +1,125 @@
+openapi: 3.1.0
+info:
+  title: Azure OpenAI Inference REST Audio Images API
+  version: '2024-10-21'
+  description: 'Data-plane REST API for running inference against models deployed to an
+
+    Azure OpenAI resource. Endpoints follow the pattern
+
+    `https://{resource-name}.openai.azure.com/openai/deployments/{deployment-id}/{endpoint}?api-version={api-version}`.
+
+
+    Authenticate with an `api-key` header or with a Microsoft Entra ID bearer token
+
+    (`Authorization: Bearer ...`, scope `https://cognitiveservices.azure.com/.default`).
+
+    '
+  contact:
+    name: Azure OpenAI Service
+    url: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+servers:
+- url: https://{resource-name}.openai.azure.com/openai
+  description: Azure OpenAI resource endpoint
+  variables:
+    resource-name:
+      default: my-resource
+      description: Your Azure OpenAI resource name
+tags:
+- name: Images
+  description: Image generation (DALL-E)
+paths:
+  /deployments/{deployment-id}/images/generations:
+    post:
+      summary: Generate images
+      operationId: generateImages
+      tags:
+      - Images
+      parameters:
+      - in: path
+        name: deployment-id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: api-version
+        required: true
+        schema:
+          type: string
+          default: '2024-10-21'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - prompt
+              properties:
+                prompt:
+                  type: string
+                n:
+                  type: integer
+                size:
+                  type: string
+                  enum:
+                  - 1024x1024
+                  - 1792x1024
+                  - 1024x1792
+                  - 512x512
+                  - 256x256
+                quality:
+                  type: string
+                  enum:
+                  - standard
+                  - hd
+                style:
+                  type: string
+                  enum:
+                  - natural
+                  - vivid
+                response_format:
+                  type: string
+                  enum:
+                  - url
+                  - b64_json
+                user:
+                  type: string
+      responses:
+        '200':
+          description: Image generation response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        b64_json:
+                          type: string
+                        revised_prompt:
+                          type: string
+      security:
+      - apiKey: []
+      - entra: []
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: api-key
+      description: Azure OpenAI resource API key
+    entra:
+      type: oauth2
+      description: Microsoft Entra ID OAuth 2.0 bearer token
+      flows:
+        clientCredentials:
+          tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
+          scopes:
+            https://cognitiveservices.azure.com/.default: Azure Cognitive Services data plane

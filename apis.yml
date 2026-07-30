@@ -8,7 +8,19 @@ description: Azure OpenAI Service (part of Microsoft Foundry Models) provides RE
   image generation, audio transcription/translation, fine-tuning, and the Responses
   API, while the control-plane API manages Azure OpenAI resources and deployments.
 type: Index
-image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/apis-json-logo.jpg
+accessModel:
+  pricing: unknown
+  onboarding: self-serve
+  trial: false
+  try_now: false
+  public: false
+  label: Self-serve signup
+  confidence: medium
+  source:
+  - authentication
+  generated: '2026-07-22'
+  method: derived
+image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/azure-openai.png
 tags:
 - AI
 - LLM
@@ -25,10 +37,10 @@ specificationVersion: '0.19'
 apis:
 - aid: azure-openai:inference-api
   name: Azure OpenAI Inference REST API
-  description: Data-plane REST API for running inference against deployed Azure OpenAI
-    models, including chat completions, completions, embeddings, image generation,
-    and audio transcription/translation. Authenticate with API key (api-key header)
-    or Microsoft Entra ID bearer token.
+  description: >-
+    Data-plane REST API for running inference against deployed Azure OpenAI models, including chat completions,
+    completions, embeddings, image generation, and audio transcription/translation. Authenticate with
+    API key (api-key header) or Microsoft Entra ID bearer token.
   humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
   baseURL: https://{your-resource-name}.openai.azure.com/openai
   tags:
@@ -45,15 +57,18 @@ apis:
   - type: API Reference (Preview)
     url: https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest
   - type: OpenAPI Source
-    url: https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
+    url: >-
+      https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI
   - type: AsyncAPI
-    url: https://raw.githubusercontent.com/api-evangelist/azure-openai/refs/heads/main/asyncapi/azure-openai-asyncapi.yml
+    url: >-
+      https://raw.githubusercontent.com/api-evangelist/azure-openai/refs/heads/main/asyncapi/azure-openai-asyncapi.yml
   - url: graphql/azure-openai-graphql.md
     type: GraphQL
 - aid: azure-openai:responses-api
   name: Azure OpenAI Responses API
-  description: Stateful, agent-friendly API for building multi-turn AI experiences
-    with tool use, file inputs, and conversation state managed on the service side.
+  description: >-
+    Stateful, agent-friendly API for building multi-turn AI experiences with tool use, file inputs, and
+    conversation state managed on the service side.
   humanURL: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
   baseURL: https://{your-resource-name}.openai.azure.com/openai/responses
   tags:
@@ -65,8 +80,9 @@ apis:
     url: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses
 - aid: azure-openai:control-plane
   name: Azure OpenAI Control Plane API
-  description: Azure Resource Manager (ARM) REST API for creating and managing Azure
-    OpenAI accounts, model deployments, network rules, and other resource configuration.
+  description: >-
+    Azure Resource Manager (ARM) REST API for creating and managing Azure OpenAI accounts, model deployments,
+    network rules, and other resource configuration.
   humanURL: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
   baseURL: https://management.azure.com
   tags:
@@ -77,6 +93,56 @@ apis:
   properties:
   - type: Documentation
     url: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
+- aid: azure-openai:azure-openai-audio-api
+  name: Azure OpenAI Service Audio API
+  description: Audio transcription and translation (Whisper)
+  humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  baseURL: https://{your-resource-name}.openai.azure.com/openai
+  tags:
+  - Audio
+  properties:
+  - type: OpenAPI
+    url: openapi/azure-openai-audio-api-openapi.yml
+- aid: azure-openai:azure-openai-chat-completions-api
+  name: Azure OpenAI Service Chat Completions API
+  description: Chat-formatted text generation
+  humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  baseURL: https://{your-resource-name}.openai.azure.com/openai
+  tags:
+  - Chat Completions
+  properties:
+  - type: OpenAPI
+    url: openapi/azure-openai-chat-completions-api-openapi.yml
+- aid: azure-openai:azure-openai-completions-api
+  name: Azure OpenAI Service Completions API
+  description: Plain text completions
+  humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  baseURL: https://{your-resource-name}.openai.azure.com/openai
+  tags:
+  - Completions
+  properties:
+  - type: OpenAPI
+    url: openapi/azure-openai-completions-api-openapi.yml
+- aid: azure-openai:azure-openai-embeddings-api
+  name: Azure OpenAI Service Embeddings API
+  description: Vector embeddings
+  humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  baseURL: https://{your-resource-name}.openai.azure.com/openai
+  tags:
+  - Embeddings
+  properties:
+  - type: OpenAPI
+    url: openapi/azure-openai-embeddings-api-openapi.yml
+- aid: azure-openai:azure-openai-images-api
+  name: Azure OpenAI Service Images API
+  description: Image generation (DALL-E)
+  humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+  baseURL: https://{your-resource-name}.openai.azure.com/openai
+  tags:
+  - Images
+  properties:
+  - type: OpenAPI
+    url: openapi/azure-openai-images-api-openapi.yml
 common:
 - type: AgenticAccess
   url: agentic-access/azure-openai-agentic-access.yml

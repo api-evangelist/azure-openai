@@ -1,0 +1,305 @@
+openapi: 3.1.0
+info:
+  title: Azure OpenAI Inference REST API
+  version: '2024-10-21'
+  description: |
+    Data-plane REST API for running inference against models deployed to an
+    Azure OpenAI resource. Endpoints follow the pattern
+    `https://{resource-name}.openai.azure.com/openai/deployments/{deployment-id}/{endpoint}?api-version={api-version}`.
+
+    Authenticate with an `api-key` header or with a Microsoft Entra ID bearer token
+    (`Authorization: Bearer ...`, scope `https://cognitiveservices.azure.com/.default`).
+  contact:
+    name: Azure OpenAI Service
+    url: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
+servers:
+  - url: https://{resource-name}.openai.azure.com/openai
+    description: Azure OpenAI resource endpoint
+    variables:
+      resource-name:
+        default: my-resource
+        description: Your Azure OpenAI resource name
+tags:
+  - name: Chat Completions
+    description: Chat-formatted text generation
+  - name: Completions
+    description: Plain text completions
+  - name: Embeddings
+    description: Vector embeddings
+  - name: Images
+    description: Image generation (DALL-E)
+  - name: Audio
+    description: Audio transcription and translation (Whisper)
+paths:
+  /deployments/{deployment-id}/chat/completions:
+    post:
+      summary: Create a chat completion
+      operationId: createChatCompletion
+      tags: [Chat Completions]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatCompletionRequest' }
+      responses:
+        '200':
+          description: Chat completion
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCompletionResponse' }
+      security:
+        - apiKey: []
+        - entra: []
+  /deployments/{deployment-id}/completions:
+    post:
+      summary: Create a text completion
+      operationId: createCompletion
+      tags: [Completions]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt: { type: [string, array] }
+                max_tokens: { type: integer }
+                temperature: { type: number }
+                top_p: { type: number }
+                n: { type: integer }
+                stream: { type: boolean }
+                logprobs: { type: integer }
+                stop: { type: [string, array] }
+      responses:
+        '200':
+          description: Completion response
+          content:
+            application/json:
+              schema: { type: object }
+      security:
+        - apiKey: []
+        - entra: []
+  /deployments/{deployment-id}/embeddings:
+    post:
+      summary: Create embeddings
+      operationId: createEmbeddings
+      tags: [Embeddings]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [input]
+              properties:
+                input: { type: [string, array] }
+                user: { type: string }
+                encoding_format: { type: string, enum: [float, base64] }
+                dimensions: { type: integer }
+      responses:
+        '200':
+          description: Embeddings response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object: { type: string }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        object: { type: string }
+                        embedding:
+                          type: array
+                          items: { type: number }
+                        index: { type: integer }
+                  usage: { type: object }
+      security:
+        - apiKey: []
+        - entra: []
+  /deployments/{deployment-id}/images/generations:
+    post:
+      summary: Generate images
+      operationId: generateImages
+      tags: [Images]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt: { type: string }
+                n: { type: integer }
+                size: { type: string, enum: ['1024x1024', '1792x1024', '1024x1792', '512x512', '256x256'] }
+                quality: { type: string, enum: [standard, hd] }
+                style: { type: string, enum: [natural, vivid] }
+                response_format: { type: string, enum: [url, b64_json] }
+                user: { type: string }
+      responses:
+        '200':
+          description: Image generation response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: integer }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        b64_json: { type: string }
+                        revised_prompt: { type: string }
+      security:
+        - apiKey: []
+        - entra: []
+  /deployments/{deployment-id}/audio/transcriptions:
+    post:
+      summary: Transcribe audio
+      operationId: createTranscription
+      tags: [Audio]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                language: { type: string }
+                prompt: { type: string }
+                response_format: { type: string, enum: [json, text, srt, verbose_json, vtt] }
+                temperature: { type: number }
+      responses:
+        '200':
+          description: Transcription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text: { type: string }
+      security:
+        - apiKey: []
+        - entra: []
+  /deployments/{deployment-id}/audio/translations:
+    post:
+      summary: Translate audio to English
+      operationId: createTranslation
+      tags: [Audio]
+      parameters:
+        - { in: path, name: deployment-id, required: true, schema: { type: string } }
+        - { in: query, name: api-version, required: true, schema: { type: string, default: '2024-10-21' } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                prompt: { type: string }
+                response_format: { type: string, enum: [json, text, srt, verbose_json, vtt] }
+                temperature: { type: number }
+      responses:
+        '200':
+          description: Translation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text: { type: string }
+      security:
+        - apiKey: []
+        - entra: []
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: api-key
+      description: Azure OpenAI resource API key
+    entra:
+      type: oauth2
+      description: Microsoft Entra ID OAuth 2.0 bearer token
+      flows:
+        clientCredentials:
+          tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
+          scopes:
+            https://cognitiveservices.azure.com/.default: Azure Cognitive Services data plane
+  schemas:
+    ChatMessage:
+      type: object
+      required: [role]
+      properties:
+        role: { type: string, enum: [system, user, assistant, tool, developer, function] }
+        content: { type: [string, array, 'null'] }
+        name: { type: string }
+        tool_call_id: { type: string }
+    ChatCompletionRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/ChatMessage' }
+        temperature: { type: number }
+        top_p: { type: number }
+        n: { type: integer }
+        stream: { type: boolean }
+        stop: { type: [string, array] }
+        max_tokens: { type: integer }
+        max_completion_tokens: { type: integer }
+        presence_penalty: { type: number }
+        frequency_penalty: { type: number }
+        logit_bias: { type: object }
+        user: { type: string }
+        seed: { type: integer }
+        response_format: { type: object }
+        tools: { type: array, items: { type: object } }
+        tool_choice: { type: [string, object] }
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id: { type: string }
+        object: { type: string }
+        created: { type: integer }
+        model: { type: string }
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              message: { $ref: '#/components/schemas/ChatMessage' }
+              finish_reason: { type: string }
+        usage:
+          type: object
+          properties:
+            prompt_tokens: { type: integer }
+            completion_tokens: { type: integer }
+            total_tokens: { type: integer }

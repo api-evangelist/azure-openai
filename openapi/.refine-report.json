@@ -1,0 +1,22 @@
+{
+  "provider": "azure-openai",
+  "sources": [
+    "azure-openai-audio-api-openapi.yml",
+    "azure-openai-chat-completions-api-openapi.yml",
+    "azure-openai-completions-api-openapi.yml",
+    "azure-openai-embeddings-api-openapi.yml",
+    "azure-openai-images-api-openapi.yml"
+  ],
+  "outputs": [
+    "azure-openai-audio-api-openapi.yml",
+    "azure-openai-chat-completions-api-openapi.yml",
+    "azure-openai-completions-api-openapi.yml",
+    "azure-openai-embeddings-api-openapi.yml",
+    "azure-openai-images-api-openapi.yml"
+  ],
+  "archived": [],
+  "errors": [],
+  "warnings": [],
+  "notes": [],
+  "skipped": []
+}

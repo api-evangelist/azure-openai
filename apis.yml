@@ -22,6 +22,15 @@ accessModel:
   method: derived
 image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/azure-openai.png
 tags:
+- Artificial Intelligence
+- LLM
+- Generative AI
+- Azure
+- OpenAI
+- Foundation Models
+- Chat Completions
+- Embeddings
+tags_raw:
 - AI
 - LLM
 - Generative AI
@@ -44,6 +53,12 @@ apis:
   humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
   baseURL: https://{your-resource-name}.openai.azure.com/openai
   tags:
+  - Inference
+  - Chat Completions
+  - Embeddings
+  - Image-Generation
+  - Audio
+  tags_raw:
   - Inference
   - Chat Completions
   - Embeddings
@@ -86,6 +101,11 @@ apis:
   humanURL: https://learn.microsoft.com/en-us/rest/api/cognitiveservices/
   baseURL: https://management.azure.com
   tags:
+  - ARM
+  - Control Plane
+  - Deployment
+  - Resource Management
+  tags_raw:
   - ARM
   - Control Plane
   - Deployments
@@ -139,6 +159,8 @@ apis:
   humanURL: https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
   baseURL: https://{your-resource-name}.openai.azure.com/openai
   tags:
+  - Image
+  tags_raw:
   - Images
   properties:
   - type: OpenAPI

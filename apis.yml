@@ -8,6 +8,18 @@ description: Azure OpenAI Service (part of Microsoft Foundry Models) provides RE
   image generation, audio transcription/translation, fine-tuning, and the Responses
   API, while the control-plane API manages Azure OpenAI resources and deployments.
 type: Index
+deliveryModel:
+  model: saas
+  open_source: false
+  commercial: true
+  callable_host: true
+  label: Hosted service · you call their endpoint
+  confidence: high
+  source:
+  - openapi
+  - pricing
+  generated: '2026-08-28'
+  method: derived
 accessModel:
   pricing: unknown
   onboarding: self-serve

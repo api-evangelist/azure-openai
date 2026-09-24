@@ -17,6 +17,13 @@
   "archived": [],
   "errors": [],
   "warnings": [],
-  "notes": [],
+  "notes": [
+    "azure-openai-audio-api-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "azure-openai-chat-completions-api-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "azure-openai-completions-api-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "azure-openai-embeddings-api-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "azure-openai-images-api-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "apis.yml register: already-registered"
+  ],
   "skipped": []
 }

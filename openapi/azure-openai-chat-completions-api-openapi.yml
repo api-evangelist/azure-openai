@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   title: Azure OpenAI Inference REST Audio Chat Completions API
   version: '2024-10-21'
@@ -64,6 +64,37 @@ paths:
       - entra: []
 components:
   schemas:
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
     ChatCompletionRequest:
       type: object
       required:
@@ -109,37 +140,6 @@ components:
           type:
           - string
           - object
-    ChatCompletionResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        object:
-          type: string
-        created:
-          type: integer
-        model:
-          type: string
-        choices:
-          type: array
-          items:
-            type: object
-            properties:
-              index:
-                type: integer
-              message:
-                $ref: '#/components/schemas/ChatMessage'
-              finish_reason:
-                type: string
-        usage:
-          type: object
-          properties:
-            prompt_tokens:
-              type: integer
-            completion_tokens:
-              type: integer
-            total_tokens:
-              type: integer
     ChatMessage:
       type: object
       required:
